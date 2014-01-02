@@ -36,4 +36,4 @@ nosetests.xml
 .pydevproject
 
 # My project
-.pickle
+*.pickle

@@ -8,6 +8,7 @@ Created on Dec 31, 2013
 import random
 import pickle
 import traceback
+import os
 
 """ Basic blog using webpy 0.3 """
 import web
@@ -18,6 +19,7 @@ import models
 urls = (
     '/', 'Login',
     '/admin', 'Admin',
+    '/restore', 'Restore',
     '/game/(\w+)', 'Game',
     '/message/(\w+)', 'Message'
 )
@@ -79,6 +81,21 @@ class Admin:
             
         raise web.seeother('/')
     
+class Restore:
+    def GET(self):
+        
+        form = web.form.Form(
+            web.form.Dropdown('status', args = [filename for filename in os.listdir('status') if 'pickle' in filename]),
+            web.form.Button('Restore', description = u"恢复状态"),
+        )
+        return render.restore(form)
+    
+    def POST(self):
+        global s
+        filename = web.input()['status']
+        s = pickle.load(open('status/%s'%filename)).pre()   
+        raise web.seeother('/')     
+
 class Message:
     def GET(self, username):
         global s
@@ -119,7 +136,6 @@ class Game:
         raise web.seeother('/game/%s' % username)
 
 s = None
-# s = pickle.load(open('status/202201VoteStatus')).pre()
 
 if __name__ == '__main__':
     app = web.application(urls, globals())
