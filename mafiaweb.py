@@ -7,6 +7,7 @@ Created on Dec 31, 2013
 '''
 import random
 import pickle
+import traceback
 
 """ Basic blog using webpy 0.3 """
 import web
@@ -109,6 +110,7 @@ class Game:
                 try:
                     s = s.act(**kwargs)
                 except:
+                    traceback.print_exc()
                     pass
                 #TODO
         else:
