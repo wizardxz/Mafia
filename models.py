@@ -98,7 +98,7 @@ class GameStart(Status):
         
     def pre(self):
         for p in self.context.players:
-            p.message.add("sys", "你拿到的身份牌是%s" % ("杀手" if p.identity == KILLER else "警察" if p.identity == POLICE else "平民"))
+            p.message.add("sys", u"你拿到的身份牌是%s" % (u"杀手" if p.identity == KILLER else u"警察" if p.identity == POLICE else u"平民"))
         return RoundStart(self.context).pre()
             
 class RoundStart(Status):
@@ -110,7 +110,7 @@ class RoundStart(Status):
         self.context.clear(0 if self.context.gameround is None else \
                            self.context.gameround + 1)
         for p in self.context.players:
-            p.message.add("temp", "天黑请闭眼")
+            p.message.add("temp", u"天黑请闭眼")
 
         return KillStatus(self.context).pre()
 
@@ -129,12 +129,12 @@ class KillStatus(ActStatus):
             if p.live and p.identity == KILLER:
                 ally = [p1.nickname for p1 in self.context.players if p1.identity == KILLER and p != p1]
                 if len(ally) == 0:
-                    ally_text = "你没有同伴"
+                    ally_text = u"你没有同伴"
                 else:
-                    ally_text = '你的同伴是' + (', '.join(ally))
-                p.message.add("temp", "轮到你了，%s" % ally_text)
+                    ally_text = u'你的同伴是' + (', '.join(ally))
+                p.message.add("temp", u"轮到你了，%s" % ally_text)
             else:
-                p.message.add("temp", "等待杀手杀人")
+                p.message.add("temp", u"等待杀手杀人")
         return self
         
     
@@ -154,13 +154,13 @@ class KillStatus(ActStatus):
     def act(self, actor, target):
         self.mapping[actor] = target
         for p in self.actors:
-            p.message.add("kill", "%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
+            p.message.add("kill", u"%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
         
     @ActStatus.controlled_execution    
     def cancel(self, actor):
         self.mapping[actor] = None
         for p in self.actors:
-            p.message.add("kill", "%s取消了行动" % (actor.nickname), actor)
+            p.message.add("kill", u"%s取消了行动" % (actor.nickname), actor)
         
 class InvestigateStatus(ActStatus):
     def __init__(self, context):
@@ -177,25 +177,25 @@ class InvestigateStatus(ActStatus):
             if p.live and p.identity == POLICE:
                 ally = [p1.nickname for p1 in self.context.players if p1.identity == POLICE and p != p1]
                 if len(ally) == 0:
-                    ally_text = "你没有同伴"
+                    ally_text = u"你没有同伴"
                 else:
-                    ally_text = '你的同伴是' + (', '.join(ally))
-                p.message.add("temp", "轮到你了，%s" % ally_text)
+                    ally_text = u'你的同伴是' + (', '.join(ally))
+                p.message.add("temp", u"轮到你了，%s" % ally_text)
             else:
-                p.message.add("temp", "等待警察验人")
+                p.message.add("temp", u"等待警察验人")
         return self
     
     def post(self):
         if len(set(self.mapping.values())) == 1:
             self.context.suspect = self.mapping.values()[0]
-            message_text = "法官告诉你们，你们的目标%s%s是杀手" % \
-            (self.context.suspect.nickname, '' if self.context.suspect.identity == KILLER else '不')
+            message_text = u"法官告诉你们，你们的目标%s%s是杀手" % \
+            (self.context.suspect.nickname, '' if self.context.suspect.identity == KILLER else u'不')
             for p in self.actors:
                 p.message.add("investigate_result", message_text, 
                               target = self.context.suspect)
             self.context.dying.live = False # kill
             for p in self.context.players:
-                p.message.add("kill_result", "%s在昨晚被杀手杀死了" % self.context.dying.nickname,
+                p.message.add("kill_result", u"%s在昨晚被杀手杀死了" % self.context.dying.nickname,
                               target = self.context.dying)
             
             return TalkStatus(self.context, self.context.dying,
@@ -210,13 +210,13 @@ class InvestigateStatus(ActStatus):
     def act(self, actor, target):
         self.mapping[actor] = target
         for p in self.actors:
-            p.message.add("investigate", "%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
+            p.message.add("investigate", u"%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
         
     @ActStatus.controlled_execution    
     def cancel(self, actor):
         self.mapping[actor] = None
         for p in self.actors:
-            p.message.add("investigate", "%s取消了行动" % (actor.nickname), actor)
+            p.message.add("investigate", u"%s取消了行动" % (actor.nickname), actor)
 
 class TalkStatus(ActStatus):
     def __init__(self, context, talker, targets, terminate, incremental, pk = False):
@@ -242,9 +242,9 @@ class TalkStatus(ActStatus):
                                  and (not self.pk or self.talker in self.context.vulnerable):
             for p in self.context.players:
                 if p != self.talker:
-                    p.message.add('temp', "等待%s的发言" % self.talker.nickname)
+                    p.message.add('temp', u"等待%s的发言" % self.talker.nickname)
                 else:
-                    p.message.add('temp', "请发言")
+                    p.message.add('temp', u"请发言")
             return self
         else:
             return self.post()
@@ -254,7 +254,7 @@ class TalkStatus(ActStatus):
         if target is not None and not target in self.context.vulnerable:
             self.context.vulnerable.append(target)
         for p in self.context.players:
-            p.message.add('talk', "%s说：%s" % (actor.nickname, words), actor, target)
+            p.message.add('talk', u"%s说：%s" % (actor.nickname, words), actor, target)
             
     def post(self):
         next_talker = self.get_next_talker()
@@ -279,7 +279,7 @@ class VoteStatus(ActStatus):
         
     def pre(self):
         for p in self.actors:
-            p.message.add('temp', "请投票")
+            p.message.add('temp', u"请投票")
         return self
         
     
@@ -292,7 +292,7 @@ class VoteStatus(ActStatus):
         most_ticket = max(tickets.values())
         tickets_list = [(target, ticket) for target, ticket in tickets.iteritems()]
         tickets_list.sort(key = lambda x:x[1], reverse = True)
-        result_message = ','.join(["%s有%d票(%s)"%(target.nickname, ticket, ','.join([k.nickname for k, v in self.mapping.iteritems() if v == target])) 
+        result_message = ','.join([u"%s有%d票(%s)"%(target.nickname, ticket, ','.join([k.nickname for k, v in self.mapping.iteritems() if v == target])) 
                                    for target, ticket in tickets_list if ticket > 0])
         
         pk = [p for p in self.context.vulnerable if tickets[p] == most_ticket]
@@ -306,7 +306,7 @@ class VoteStatus(ActStatus):
                 return gameover
                 
             for p in self.context.players:
-                p.message.add('execute', "处决%s" % pk[0].nickname, target = pk[0])
+                p.message.add('execute', u"处决%s" % pk[0].nickname, target = pk[0])
             self.vulnerable = []
             if self.context.gameround <= self.context.hanging_man_can_talk_before:
                 return LastWordsStatus(self.context, pk[0]).pre()
@@ -314,7 +314,7 @@ class VoteStatus(ActStatus):
                 return RoundStart(self.context).pre()
         else:
             for p in self.context.players:
-                p.message.add('pk', ', '.join([p.nickname for p in pk]) + '一起走上pk台')
+                p.message.add('pk', ', '.join([p.nickname for p in pk]) + u'一起走上pk台')
             self.context.vulnerable = pk
             
             return TalkStatus(self.context, self.context.dying,
@@ -328,9 +328,9 @@ class VoteStatus(ActStatus):
     def act(self, actor, target):
         self.mapping[actor] = target
         if target is not None:
-            actor.message.add('vote', "你投给了%s" % target.nickname, actor, target)
+            actor.message.add('vote', u"你投给了%s" % target.nickname, actor, target)
         else:
-            actor.message.add('vote', "你弃权", actor)
+            actor.message.add('vote', u"你弃权", actor)
         
 class LastWordsStatus(ActStatus):
     def __init__(self, context, talker):
@@ -345,14 +345,14 @@ class LastWordsStatus(ActStatus):
     def pre(self):
         for p in self.context.players:
             if p != self.talker:
-                p.message.add('temp', "等待%s说遗言" % self.talker.nickname)
-        self.talker.message.add('temp', "请说遗言")
+                p.message.add('temp', u"等待%s说遗言" % self.talker.nickname)
+        self.talker.message.add('temp', u"请说遗言")
         return self
 
     @ActStatus.controlled_execution    
     def act(self, actor, words):
         for p in self.context.players:
-            p.message.add('lastwords', "%s的遗言是：%s." % (actor.nickname, words), actor)
+            p.message.add('lastwords', u"%s的遗言是：%s." % (actor.nickname, words), actor)
             
     def post(self):
         return RoundStart(self.context).pre()
@@ -374,10 +374,10 @@ class GameOver(Status):
         
     def pre(self):
         for p in self.context.players:
-            p.message.add('final', "真相大白：%s是杀手；%s是警察。%s取得了胜利！" % (
+            p.message.add('final', u"真相大白：%s是杀手；%s是警察。%s取得了胜利！" % (
                 ','.join([p.nickname for p in self.context.players if p.identity == KILLER]),
                 ','.join([p.nickname for p in self.context.players if p.identity == POLICE]),
-                '杀手' if self.winner == KILLER else '警察'))
+                u'杀手' if self.winner == KILLER else u'警察'))
         return self
     
         

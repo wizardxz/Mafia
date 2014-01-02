@@ -29,9 +29,9 @@ render = web.template.render('templates', base='base', globals = {'models':model
 class Login:
     def GET(self):
         form = web.form.Form(
-            web.form.Textbox('username', description = "用户名"),
-            web.form.Textbox('nickname', description = "昵称"),
-            web.form.Button('Login', description = "登录"),
+            web.form.Textbox('username', description = u"用户名"),
+            web.form.Textbox('nickname', description = u"昵称"),
+            web.form.Button('Login', description = u"登录"),
         )
         return render.login(form)
     
@@ -53,12 +53,12 @@ class Login:
 class Admin:
     def GET(self):
         form = web.form.Form(
-            web.form.Textbox('players', description = "全部玩家用户名，逗号分隔"),
-            web.form.Textbox('killer_num', description = "杀手人数"),
-            web.form.Textbox('police_num', description = "警察人数"),
-            web.form.Textbox('civilian_num', description = "平民人数"),
-            web.form.Radio('civilian_all_die_winner', ['killer', 'police'], description = "平民全部牺牲情况下的获胜方"),
-            web.form.Button('submit', description = "创建游戏"),
+            web.form.Textbox('players', description = u"全部玩家用户名，逗号分隔"),
+            web.form.Textbox('killer_num', description = u"杀手人数"),
+            web.form.Textbox('police_num', description = u"警察人数"),
+            web.form.Textbox('civilian_num', description = u"平民人数"),
+            web.form.Radio('civilian_all_die_winner', ['killer', 'police'], description = u"平民全部牺牲情况下的获胜方"),
+            web.form.Button('submit', description = u"创建游戏"),
         )
         return render.admin(form)
     
@@ -115,7 +115,7 @@ class Game:
                 #TODO
         else:
             actor = s.context.get_player(username)
-            actor.message.add("warn", "您刚刚的操作已过期，请重试")
+            actor.message.add("warn", u"您刚刚的操作已过期，请重试")
         raise web.seeother('/game/%s' % username)
 
 s = None
