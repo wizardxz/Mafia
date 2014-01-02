@@ -1,0 +1,20 @@
+$def with (username, s)
+
+$if s is None:
+    <h1>游戏尚未开始</h1>
+$else:
+    $ player = s.context.get_player(username)
+    
+    <table width="100%" class="message">
+    $for i in range(len(player.message.data)):
+        $ msg = player.message.data[-(i+1)]
+        <tr class="message"><td class="$msg.category">$msg.text</td></tr>
+    </table>
+    
+    <script type="text/JavaScript">
+        setTimeout("location.reload(true);",5000);
+    </script>
+    
+
+
+   
