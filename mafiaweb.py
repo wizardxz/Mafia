@@ -17,6 +17,7 @@ import models
 ### Url mappings
 
 urls = (
+    '/favicon.ico','favicon',
     '/', 'Login',
     '/admin', 'Admin',
     '/restore', 'Restore',
@@ -24,6 +25,10 @@ urls = (
     '/message/(\w+)', 'Message'
 )
 
+class favicon: 
+    def GET(self): 
+        f = open("static/favicon.ico", 'rb') 
+        return f.read() 
 
 ### Templates
 render = web.template.render('templates', base='base', globals = {'models':models})
@@ -100,7 +105,7 @@ class Message:
     def GET(self, username):
         global s
         return render.message(username, s)
-    
+
 class Game:
     def GET(self, username):
         global s

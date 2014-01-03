@@ -244,7 +244,7 @@ class TalkStatus(ActStatus):
                 if p != self.talker:
                     p.message.add('temp', u"等待%s的发言" % self.talker.nickname)
                 else:
-                    p.message.add('temp', u"请发言")
+                    p.message.add('temp', u"目前被点的有%s，请发言" % ','.join([p.nickname for p in self.context.vulnerable]))
             return self
         else:
             return self.post()
@@ -278,6 +278,11 @@ class VoteStatus(ActStatus):
         self.save()
         
     def pre(self):
+        if len(self.targets) == 1:
+            for p in self.actors:
+                p.message.add('sys', u"目前只有%s被点" % self.targets[0].nickname)
+            return self.post()
+        
         for p in self.actors:
             p.message.add('temp', u"请投票")
         return self

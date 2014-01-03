@@ -31,13 +31,24 @@ $else:
     $elif player in s.actors:
         <form action="" method="post">
         <input type="hidden" name="sid" value="$id(s)">
+        $if isinstance(s, models.KillStatus):
+            <h2>请选择杀人目标</h2>
+        $elif isinstance(s, models.InvestigateStatus):
+            <h2>请选择指认目标</h2>
+        $elif isinstance(s, models.TalkStatus) and s.targets is not None:
+            <h2>请选择怀疑对象（点人）</h2>
+        $elif isinstance(s, models.VoteStatus):
+            <h2>请选择投票对象</h2>
+
         $if s.targets is not None:
             <table>
             $for target in s.targets:
                 <tr><td><input type="radio" name="target" value="$target.username">$target.nickname</input></td></tr>
             <tr><td><input type="radio" name="target" value="None">取消/弃权</input></td></tr>
             </table>
+
         $if isinstance(s, models.TalkStatus) or isinstance(s, models.LastWordsStatus):
+            <h2>请发言</h2>
             <textarea rows="4" cols="50" name="words"> </textarea>
         <p>
             <input type="submit" value="Submit"/> &nbsp; 

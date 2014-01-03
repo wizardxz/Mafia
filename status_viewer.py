@@ -6,7 +6,7 @@ Created on Jan 1, 2014
 import pickle
 
 def main():
-    s = pickle.load(open('status/190140TalkStatus')).pre()
+    s = pickle.load(open('status/112115KillStatus.pickle')).pre()
     print s.__class__
     if getattr(s, 'actors', None) is not None:
         print "Actors:" + ','.join([p.username for p in s.actors])
