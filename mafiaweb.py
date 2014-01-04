@@ -80,7 +80,7 @@ class Admin:
         random.shuffle(identities)
         
         context = models.Context([models.Player(username, identity) for username, identity in zip(usernames, identities)])
-        context.civilian_all_die_winner = models.POLICE if web.input()['civilian_all_die_winner'] == 'police' else 'killer'
+        context.civilian_all_die_winner = models.POLICE if web.input()['civilian_all_die_winner'] == 'police' else models.KILLER
         
         s = models.GameStart(context).pre()
             

@@ -142,9 +142,12 @@ class KillStatus(ActStatus):
         if len(set(self.mapping.values())) == 1:
             self.context.dying = self.mapping.values()[0]
             #possible game over
-            gameover = is_gameover(self.context)
-            if gameover is not None:
-                return gameover
+            winner = get_winner(self.context)
+            if winner is not None:
+                for p in self.context.players:
+                    p.message.add("kill_result", u"%s在昨晚被杀手杀死了" % self.context.dying.nickname,
+                                  target = self.context.dying)
+                return GameOver(self.context, winner).pre()
             
             return InvestigateStatus(self.context).pre()
         else:
@@ -289,30 +292,34 @@ class VoteStatus(ActStatus):
         
     
     def post(self):
-        tickets = dict([(p, 0) for p in self.actors])
-        for target in self.mapping.values():
-            if target is not None:
-                tickets[target] += 1
-         
-        most_ticket = max(tickets.values())
-        tickets_list = [(target, ticket) for target, ticket in tickets.iteritems()]
-        tickets_list.sort(key = lambda x:x[1], reverse = True)
-        result_message = ','.join([u"%s有%d票(%s)"%(target.nickname, ticket, ','.join([k.nickname for k, v in self.mapping.iteritems() if v == target])) 
-                                   for target, ticket in tickets_list if ticket > 0])
-        
-        pk = [p for p in self.context.vulnerable if tickets[p] == most_ticket]
-        for p in self.context.players:
-            p.message.add('vote_result', result_message)
+        if len(self.targets) == 1:
+            pk = self.targets[:]
+        else:
+            tickets = dict([(p, 0) for p in self.actors])
+            for target in self.mapping.values():
+                if target is not None:
+                    tickets[target] += 1
+             
+            most_ticket = max(tickets.values())
+            tickets_list = [(target, ticket) for target, ticket in tickets.iteritems()]
+            tickets_list.sort(key = lambda x:x[1], reverse = True)
+            result_message = ','.join([u"%s有%d票(%s)"%(target.nickname, ticket, ','.join([k.nickname for k, v in self.mapping.iteritems() if v == target])) 
+                                       for target, ticket in tickets_list if ticket > 0])
+            
+            pk = [p for p in self.context.vulnerable if tickets[p] == most_ticket]
+            for p in self.context.players:
+                p.message.add('vote_result', result_message)
         if len(pk) == 1:
             pk[0].live = False
-            #possible game over
-            gameover = is_gameover(self.context)
-            if gameover is not None:
-                return gameover
                 
             for p in self.context.players:
                 p.message.add('execute', u"处决%s" % pk[0].nickname, target = pk[0])
-            self.vulnerable = []
+
+            #possible game over
+            winner = get_winner(self.context)
+            if winner is not None:
+                return GameOver(self.context, winner).pre()
+
             if self.context.gameround <= self.context.hanging_man_can_talk_before:
                 return LastWordsStatus(self.context, pk[0]).pre()
             else:
@@ -362,13 +369,13 @@ class LastWordsStatus(ActStatus):
     def post(self):
         return RoundStart(self.context).pre()
     
-def is_gameover(context):
+def get_winner(context):
     if not any([p.live and context.dying != p for p in context.players if p.identity == KILLER]):
-        return GameOver(context, POLICE).pre()
+        return POLICE
     elif not any([p.live and context.dying != p for p in context.players if p.identity == POLICE]):
-        return GameOver(context, KILLER).pre()
+        return KILLER
     elif not any([p.live and context.dying != p for p in context.players if p.identity == CIVILIAN]):
-        return GameOver(context, context.civilian_all_die_winner).pre()
+        return context.civilian_all_die_winner
     return None
 
 class GameOver(Status):
