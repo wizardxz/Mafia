@@ -1,5 +1,7 @@
 $def with (username, s)
 
+<div style="height:100%;overflow:auto;">
+
 $if s is None:
     <h1>游戏尚未开始</h1>
 $else:
@@ -15,6 +17,6 @@ $else:
         setTimeout("location.reload(true);",5000);
     </script>
     
-
+</div>
 
    
