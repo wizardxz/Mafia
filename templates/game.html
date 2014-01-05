@@ -28,31 +28,29 @@ $else:
     
     $if isinstance(s, models.GameOver):
         <h1>游戏结束</h1>
-    $elif player in s.actors:
+    $elif s.form(player) is not None:
         <form action="" method="post">
         <input type="hidden" name="sid" value="$id(s)">
-        $if isinstance(s, models.KillStatus):
-            <h2>请选择杀人目标</h2>
-        $elif isinstance(s, models.InvestigateStatus):
-            <h2>请选择指认目标</h2>
-        $elif isinstance(s, models.TalkStatus) and s.targets is not None:
-            <h2>请选择怀疑对象（点人）</h2>
-        $elif isinstance(s, models.VoteStatus):
-            <h2>请选择投票对象</h2>
-
-        $if s.targets is not None:
-            <table>
-            $for target in s.targets:
-                <tr><td><input type="radio" name="target" value="$target.username">$target.nickname</input></td></tr>
-            <tr><td><input type="radio" name="target" value="None">取消/弃权</input></td></tr>
-            </table>
-
-        $if isinstance(s, models.TalkStatus) or isinstance(s, models.LastWordsStatus):
-            <h2>请发言</h2>
+        $if s.form(player)['act'].get('target', None) is not None:
+            $ label, targets = s.form(player)['act']['target']
+            $if targets is not None:
+                <h2>$label</h2>
+                <table>
+                $for target in targets:
+                    $if target is not None:
+                        <tr><td><input type="radio" name="target" value="user:$target.username">$target.nickname</input></td></tr>
+                    $else:
+                        <tr><td><input type="radio" name="target" value="None" checked="checked">弃权</input></td></tr>
+                </table>
+        $if 'words' in s.form(player)['act']:
+            $ label, _ = s.form(player)['act']['words']
+            <h2>$label</h2>
             <textarea rows="4" cols="50" name="words"> </textarea>
         <p>
-            <input type="submit" value="Submit"/> &nbsp; 
-            <input type="reset" value="Reset"/>
+            <input type="submit" name="submit" value="确认"/> &nbsp;
+            $if 'cancel' in s.form(player):
+                <input type="submit" name="cancel" value="取消"/> &nbsp;
+            <input type="reset" value="重置"/>
         </p>
         </form>
     $else:
@@ -63,6 +61,7 @@ $else:
         <script type="text/JavaScript">
             setTimeout("location.reload(true);",15000);
         </script>
+        
         
     
 <a href="javascript:history.go(0)">刷新</a>

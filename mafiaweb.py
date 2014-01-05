@@ -88,7 +88,6 @@ class Admin:
     
 class Restore:
     def GET(self):
-        
         form = web.form.Form(
             web.form.Dropdown('status', args = [filename for filename in os.listdir('status') if 'pickle' in filename]),
             web.form.Button('Restore', description = u"恢复状态"),
@@ -113,30 +112,26 @@ class Game:
     
     def POST(self, username):
         global s
+        actor = s.context.get_player(username)
         if str(id(s)) == web.input()['sid']:
-            kwargs = {'actor' : s.context.get_player(username)}
+            kwargs = {'actor':actor}
             if 'target' in web.input():
                 target_text = web.input()['target']
                 if target_text == 'None':
-                    target = None
+                    kwargs['target'] = None
                 else:
-                    target = s.context.get_player(target_text)
+                    kwargs['target'] = s.context.get_player(target_text[5:]) # perfix is user:
+                    
             if 'words' in web.input():
                 kwargs['words'] = web.input()['words']
                     
-            if getattr(s, 'cancel', None) is not None and 'target' in web.input() and target is None:
-                s = s.cancel(**kwargs)
-            else:
-                if 'target' in locals():
-                    kwargs['target'] = target
-                try:
+            if 'submit' in web.input():
+                if all([field in kwargs or value is None for field, (_, value) in s.form(actor)['act'].iteritems()]):
                     s = s.act(**kwargs)
-                except:
-                    traceback.print_exc()
-                    pass
-                #TODO
+            elif 'cancel' in web.input():
+                s = s.cancel(actor = actor)
+
         else:
-            actor = s.context.get_player(username)
             actor.message.add("warn", u"您刚刚的操作已过期，请重试")
         raise web.seeother('/game/%s' % username)
 

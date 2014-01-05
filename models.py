@@ -58,6 +58,12 @@ class Context:
             if p.username == username:
                 return p
 
+class WrongActor(Exception):
+    pass
+
+class WrongTarget(Exception):
+    pass
+
 class Status:
     def save(self):
         filename = "status/%s%s.pickle" % (datetime.datetime.now().strftime("%H%M%S"), str(self.__class__).split('.')[-1])
@@ -74,16 +80,17 @@ class ActStatus(Status):
         self.completed = dict([(p, False) for p in actors])
         
     @staticmethod
-    def controlled_execution(func):
+    def count(func):
         def inner(*args, **kwargs):
-            assert 'actor' in kwargs
-            actor = kwargs['actor']
-            target = kwargs.get('target', None)
+            # self
             self = args[0]
-            if actor in self.actors:
-                if target is None or target in self.targets:
-                    self.completed[actor] = (func.__name__ == 'act')
-                    func(self, **kwargs)
+            assert isinstance(self, ActStatus)
+
+            assert 'actor' in kwargs # must have an actor
+            actor = kwargs['actor']
+            
+            self.completed[actor] = (func.__name__ == 'act')
+            func(self, **kwargs)
                     
             if all(self.completed.values()):
                 return self.post()
@@ -153,14 +160,29 @@ class KillStatus(ActStatus):
         else:
             return self
 
-    @ActStatus.controlled_execution    
+    def form(self, player):
+        if player in self.actors:
+            return {
+                'act':{'target': (u'请选择杀人目标', self.targets)},
+                'cancel':{},
+            }
+        else:
+            return None
+
+    @ActStatus.count
     def act(self, actor, target):
+        if not actor in self.actors:
+            raise WrongActor()
+        if not target in self.targets:
+            raise WrongTarget() 
         self.mapping[actor] = target
         for p in self.actors:
             p.message.add("kill", u"%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
         
-    @ActStatus.controlled_execution    
+    @ActStatus.count
     def cancel(self, actor):
+        if not actor in self.actors:
+            raise WrongActor()
         self.mapping[actor] = None
         for p in self.actors:
             p.message.add("kill", u"%s取消了行动" % (actor.nickname), actor)
@@ -202,21 +224,36 @@ class InvestigateStatus(ActStatus):
                               target = self.context.dying)
             
             return TalkStatus(self.context, self.context.dying,
-                              targets = [p for p in self.context.players if p.live],
+                              targets = [p for p in self.context.players if p.live] + [None],
                               terminate = self.context.dying,
                               incremental = 1).pre()
 
         else:
             return self
         
-    @ActStatus.controlled_execution    
+    def form(self, player):
+        if player in self.actors:
+            return {
+                'act':{'target': (u'请选择指认目标', self.targets)},
+                'cancel':{},
+            }
+        else:
+            return None
+        
+    @ActStatus.count
     def act(self, actor, target):
+        if not actor in self.actors:
+            raise WrongActor()
+        if not target in self.targets:
+            raise WrongTarget() 
         self.mapping[actor] = target
         for p in self.actors:
             p.message.add("investigate", u"%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
         
-    @ActStatus.controlled_execution    
+    @ActStatus.count
     def cancel(self, actor):
+        if not actor in self.actors:
+            raise WrongActor()
         self.mapping[actor] = None
         for p in self.actors:
             p.message.add("investigate", u"%s取消了行动" % (actor.nickname), actor)
@@ -247,13 +284,29 @@ class TalkStatus(ActStatus):
                 if p != self.talker:
                     p.message.add('temp', u"等待%s的发言" % self.talker.nickname)
                 else:
-                    p.message.add('temp', u"目前被点的有%s，请发言" % ','.join([p.nickname for p in self.context.vulnerable]))
+                    if len(self.context.vulnerable) == 0:
+                        p.message.add('temp', u"目前还没有人被点，请发言")
+                    else:
+                        p.message.add('temp', u"目前被点的有%s，请发言" % ','.join([p.nickname for p in self.context.vulnerable]))
             return self
         else:
             return self.post()
 
-    @ActStatus.controlled_execution    
+    def form(self, player):
+        if player in self.actors:
+            return {
+                'act':{'target': (u'请选择怀疑对象（点人）', self.targets), 'words': (u"请发言", "")}
+            }
+        else:
+            return None
+
+    @ActStatus.count
     def act(self, actor, words, target = None):
+        if not actor in self.actors:
+            raise WrongActor()
+        if self.targets is not None and not target in self.targets:
+            raise WrongTarget() 
+        
         if target is not None and not target in self.context.vulnerable:
             self.context.vulnerable.append(target)
         for p in self.context.players:
@@ -275,13 +328,13 @@ class VoteStatus(ActStatus):
             context.vulnerable = [p for p in context.players if p.live]
         ActStatus.__init__(self, 
             actors = [p for p in context.players if p.live], 
-            targets = context.vulnerable,
+            targets = context.vulnerable + [None],
         )
         self.mapping = dict([(p, None) for p in self.actors])
         self.save()
         
     def pre(self):
-        if len(self.targets) == 1:
+        if len(self.targets) == 2: # one is None
             for p in self.actors:
                 p.message.add('sys', u"目前只有%s被点" % self.targets[0].nickname)
             return self.post()
@@ -292,8 +345,8 @@ class VoteStatus(ActStatus):
         
     
     def post(self):
-        if len(self.targets) == 1:
-            pk = self.targets[:]
+        if len(self.targets) == 2:
+            pk = [self.targets[0]]
         else:
             tickets = dict([(p, 0) for p in self.actors])
             for target in self.mapping.values():
@@ -306,7 +359,7 @@ class VoteStatus(ActStatus):
             result_message = ','.join([u"%s有%d票(%s)"%(target.nickname, ticket, ','.join([k.nickname for k, v in self.mapping.iteritems() if v == target])) 
                                        for target, ticket in tickets_list if ticket > 0])
             
-            pk = [p for p in self.context.vulnerable if tickets[p] == most_ticket]
+            pk = [p for p in self.targets if p is not None and tickets[p] == most_ticket]
             for p in self.context.players:
                 p.message.add('vote_result', result_message)
         if len(pk) == 1:
@@ -336,8 +389,21 @@ class VoteStatus(ActStatus):
                               pk = True
                               ).pre()
 
-    @ActStatus.controlled_execution    
+    def form(self, player):
+        if player in self.actors:
+            return {
+                'act':{'target': (u'请选择投票对象', self.targets)}
+            }
+        else:
+            return None
+        
+    @ActStatus.count
     def act(self, actor, target):
+        if not actor in self.actors:
+            raise WrongActor()
+        if not target in self.targets:
+            raise WrongTarget() 
+        
         self.mapping[actor] = target
         if target is not None:
             actor.message.add('vote', u"你投给了%s" % target.nickname, actor, target)
@@ -361,8 +427,18 @@ class LastWordsStatus(ActStatus):
         self.talker.message.add('temp', u"请说遗言")
         return self
 
-    @ActStatus.controlled_execution    
+    def form(self, player):
+        if player in self.actors:
+            return {
+                'act':{'words': (u"请说遗言", "")}
+            }        
+        else:
+            return None
+        
+    @ActStatus.count
     def act(self, actor, words):
+        if not actor in self.actors:
+            raise WrongActor()
         for p in self.context.players:
             p.message.add('lastwords', u"%s的遗言是：%s." % (actor.nickname, words), actor)
             
