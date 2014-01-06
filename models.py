@@ -7,6 +7,7 @@ Created on Dec 30, 2013
 '''
 import datetime
 import pickle
+from functools import wraps
 
 KILLER = 1
 POLICE = 2
@@ -96,7 +97,26 @@ class ActStatus(Status):
                 return self.post()
             else:
                 return self
+        inner._original = func
         return inner
+    
+    @staticmethod
+    def access(**dec_kwargs):
+        def decorator(func):
+            @wraps(func)
+            def returned_func(*args, **kwargs):
+                # self
+                self = args[0]
+                assert isinstance(self, ActStatus)
+    
+                for name, exception in [('actor', WrongActor), ('target', WrongTarget)]:
+                    if name in dec_kwargs \
+                    and getattr(self, dec_kwargs[name]) is not None \
+                    and not kwargs[name] in getattr(self, dec_kwargs[name]):
+                        raise exception()
+                return func(*args, **kwargs)
+            return returned_func
+        return decorator
     
 class GameStart(Status):
     def __init__(self, context):
@@ -169,20 +189,16 @@ class KillStatus(ActStatus):
         else:
             return None
 
+    @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, target):
-        if not actor in self.actors:
-            raise WrongActor()
-        if not target in self.targets:
-            raise WrongTarget() 
         self.mapping[actor] = target
         for p in self.actors:
             p.message.add("kill", u"%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
         
+    @ActStatus.access(actor = "actors")
     @ActStatus.count
     def cancel(self, actor):
-        if not actor in self.actors:
-            raise WrongActor()
         self.mapping[actor] = None
         for p in self.actors:
             p.message.add("kill", u"%s取消了行动" % (actor.nickname), actor)
@@ -240,20 +256,16 @@ class InvestigateStatus(ActStatus):
         else:
             return None
         
+    @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, target):
-        if not actor in self.actors:
-            raise WrongActor()
-        if not target in self.targets:
-            raise WrongTarget() 
         self.mapping[actor] = target
         for p in self.actors:
             p.message.add("investigate", u"%s的目标是%s" % (actor.nickname, target.nickname), actor, target)
         
+    @ActStatus.access(actor = "actors")
     @ActStatus.count
     def cancel(self, actor):
-        if not actor in self.actors:
-            raise WrongActor()
         self.mapping[actor] = None
         for p in self.actors:
             p.message.add("investigate", u"%s取消了行动" % (actor.nickname), actor)
@@ -300,13 +312,9 @@ class TalkStatus(ActStatus):
         else:
             return None
 
+    @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, words, target = None):
-        if not actor in self.actors:
-            raise WrongActor()
-        if self.targets is not None and not target in self.targets:
-            raise WrongTarget() 
-        
         if target is not None and not target in self.context.vulnerable:
             self.context.vulnerable.append(target)
         for p in self.context.players:
@@ -397,13 +405,9 @@ class VoteStatus(ActStatus):
         else:
             return None
         
+    @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, target):
-        if not actor in self.actors:
-            raise WrongActor()
-        if not target in self.targets:
-            raise WrongTarget() 
-        
         self.mapping[actor] = target
         if target is not None:
             actor.message.add('vote', u"你投给了%s" % target.nickname, actor, target)
@@ -435,10 +439,9 @@ class LastWordsStatus(ActStatus):
         else:
             return None
         
+    @ActStatus.access(actor = "actors")
     @ActStatus.count
     def act(self, actor, words):
-        if not actor in self.actors:
-            raise WrongActor()
         for p in self.context.players:
             p.message.add('lastwords', u"%s的遗言是：%s." % (actor.nickname, words), actor)
             
