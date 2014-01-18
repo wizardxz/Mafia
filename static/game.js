@@ -9,6 +9,8 @@ function update_messages(data) {
         $('#message').append(messages);
         $(".temp").hide();
         $(".temp:last").show();
+        var objDiv = document.getElementById("scrollable");
+        objDiv.scrollTop = objDiv.scrollHeight;
     }
 }
 

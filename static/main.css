@@ -1,0 +1,23 @@
+td.temp               { background-color: #FFFF00; }
+td.kill               { background-color: #FFC0CB; }
+td.investigate        { background-color: #1E90FF; }
+td.investigate_result { background-color: #1E90FF; }
+td.kill_result        { background-color: #FFC0CB; }
+td.talk               { background-color: #FFFFFF; }
+td.vote_result        { background-color: #90EE90; }
+td.vote               { background-color: #90EE90; }
+td.execute            { background-color: #FFC0CB; }
+td.lastwords          { background-color: #FFFFFF; }
+td.final              { background-color: #FFA500; }
+td.warn               { background-color: #CA6B6D; }
+td.sys                { color: #0000FF; }
+
+
+td.dead               { text-decoration:line-through;}
+td.live               {  }
+div.me                { color: #1E90FF; }
+
+table#message {
+    padding: 0;
+    margin: 1;
+}
