@@ -1,0 +1,6 @@
+$def with (s, secret)
+
+<h1>等待其他人动作&nbsp;
+$if not secret:
+    $','.join([p.nickname for p in s.actors if not s.completed[p]])
+</h1>

@@ -1,0 +1,4 @@
+$def with (s, player, message_count)
+
+$for message in player.message.data[message_count:]: 
+    <tr class="message"><td class="$message.category">$message.text</td></tr>

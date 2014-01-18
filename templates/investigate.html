@@ -1,0 +1,17 @@
+$def with (s)
+
+<form>
+<input type="hidden" name="sid" value="$id(s)">
+<h2>请选择指认目标</h2>
+<table>
+$for target in s.targets:
+    $if target is not None:
+        <tr><td><input type="radio" name="target" value="user:$target.username">$target.nickname</input></td></tr>
+    $else:
+        <tr><td><input type="radio" name="target" value="None" checked="checked">弃权</input></td></tr>
+</table>
+</form>
+<p>
+    <button onclick="send('submit')">确认</button> &nbsp;
+    <button onclick="send('cancel')">取消</button> &nbsp;
+</p>

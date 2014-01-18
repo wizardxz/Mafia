@@ -7,8 +7,8 @@ Created on Dec 31, 2013
 '''
 import random
 import pickle
-import traceback
 import os
+import json
 
 """ Basic blog using webpy 0.3 """
 import web
@@ -22,7 +22,9 @@ urls = (
     '/admin', 'Admin',
     '/restore', 'Restore',
     '/game/(\w+)', 'Game',
-    '/message/(\w+)', 'Message'
+    '/process/(\w+)', 'Process',
+    '/message/(\w+)', 'Message',
+    '/update', 'Update',
 )
 
 class favicon: 
@@ -100,16 +102,93 @@ class Restore:
         s = pickle.load(open('status/%s'%filename)).pre()   
         raise web.seeother('/')     
 
-class Message:
-    def GET(self, username):
+class Update:
+    def POST(self):
         global s
-        return render.message(username, s)
+        web.header('Content-Type', 'application/json')
 
-class Game:
-    def GET(self, username):
-        global s
-        return render.game(username, s)
+        if s is None:
+            messages = None
+            new_message_count = 0
+            players = None
+            form = get_form(None, None)
+            new_sid = 0
+        else:
+            username = web.input()['username']
+            message_count = int(web.input()['message_count'])
+            sid = int(web.input()['sid'])
+            
+            player = s.context.get_player(username)
+            if player is None:
+                messages = None
+                new_message_count = 0
+                players = None
+                form = get_form(s, None)
+                new_sid = 0
+            else:
+                messages = get_messages(s, player, message_count)
+                new_message_count = len(player.message.data)
+            
+                new_sid = id(s)
+                if new_sid == sid:
+                    players = form = None
+                else:
+                    players = get_players(s, player)
+                    form = get_form(s, player)
+            
+        return json.dumps(
+            ((messages, new_message_count), 
+             players, form, new_sid)
+        )
+
+formrender = web.template.render('templates')
+
+def get_messages(s, player, message_count):
+    if message_count < len(player.message.data):
+        return str(formrender.messages(s, player, message_count))
+    else:
+        return None
     
+def get_players(s, player):
+    return str(formrender.players(s, player))
+    
+def get_form(s, player):
+
+    if s is None:
+        return '<h1>游戏尚未开始</h1> <a href="/admin">Admin</a> &nbsp; <a href="/restore">Restore</a>'
+    elif player is None:
+        return '<h1>该用户不在游戏中</h1> <a href="/admin">Admin</a> &nbsp; <a href="/restore">Restore</a>'
+    elif isinstance(s, models.KillStatus):
+        if player in s.actors:
+            return str(formrender.kill(s))
+        else:
+            return str(formrender.wait(s, secret = True))
+    elif isinstance(s, models.InvestigateStatus):
+        if player in s.actors:
+            return str(formrender.investigate(s))
+        else:
+            return str(formrender.wait(s, secret = True))
+    elif isinstance(s, models.TalkStatus):
+        if player in s.actors:
+            return str(formrender.talk(s))
+        else:
+            return str(formrender.wait(s, secret = False))
+    elif isinstance(s, models.VoteStatus):
+        if player in s.actors:
+            return str(formrender.vote(s))
+        else:
+            return str(formrender.wait(s, secret = False))
+    elif isinstance(s, models.LastWordsStatus):
+        if player in s.actors:
+            return str(formrender.lastwords(s))
+        else:
+            return str(formrender.wait(s, secret = False))
+    elif isinstance(s, models.GameOver):
+        return '<h1>游戏结束</h1> <a href="/admin">Admin</a> &nbsp; <a href="/restore">Restore</a>'
+    else:
+        return None
+    
+class Process:
     def POST(self, username):
         global s
         actor = s.context.get_player(username)
@@ -125,15 +204,19 @@ class Game:
             if 'words' in web.input():
                 kwargs['words'] = web.input()['words']
                     
-            if 'submit' in web.input():
-                if all([field in kwargs or value is None for field, (_, value) in s.form(actor)['act'].iteritems()]):
-                    s = s.act(**kwargs)
-            elif 'cancel' in web.input():
+            if web.input()['type'] == 'submit':
+                s = s.act(**kwargs)
+            elif web.input()['type'] == 'cancel':
                 s = s.cancel(actor = actor)
-
         else:
             actor.message.add("warn", u"您刚刚的操作已过期，请重试")
-        raise web.seeother('/game/%s' % username)
+        return json.dumps(""); # Create a success result
+        
+                
+class Game:
+    def GET(self, username):
+        global s
+        return render.game(username, s)
 
 s = None
 

@@ -1,0 +1,14 @@
+$def with (s, player)
+
+<table width="100%" border="1">
+<tr>
+$for p in s.context.players:
+    <td align="center" width="${100.0/len(s.context.players)}%" class="$('live' if p.live else 'dead')">
+    $if player == p:
+        <div class="me">
+    $p.nickname
+    $if player == p:
+        </div>
+    </td>
+</tr>
+<table>

@@ -20,15 +20,13 @@ class Message:
         self.actor = actor
         self.target = target
         self.time = datetime.datetime.now()
-    
+            
 class MessageManager:
     def __init__(self):
         self.data = []
         
     def add(self, category, text, actor = None, target = None):
         msg = Message(category, text, actor, target)
-        if len(self.data) > 0 and self.data[-1].category == 'temp':
-            del self.data[-1]
         self.data.append(msg)
         
 class Player:
@@ -67,13 +65,13 @@ class WrongTarget(Exception):
 
 class Status:
     def save(self):
-        filename = "status/%s%s.pickle" % (datetime.datetime.now().strftime("%H%M%S"), str(self.__class__).split('.')[-1])
-        print filename
-        out = open(filename, 'w')
-        pickle.dump(self, out)
-        out.close()
-        
-
+#         filename = "status/%s%s.pickle" % (datetime.datetime.now().strftime("%H%M%S"), str(self.__class__).split('.')[-1])
+#         print filename
+#         out = open(filename, 'w')
+#         pickle.dump(self, out)
+#         out.close()
+        pass
+    
 class ActStatus(Status):
     def __init__(self, actors, targets):
         self.actors = actors
@@ -97,7 +95,6 @@ class ActStatus(Status):
                 return self.post()
             else:
                 return self
-        inner._original = func
         return inner
     
     @staticmethod
@@ -180,15 +177,6 @@ class KillStatus(ActStatus):
         else:
             return self
 
-    def form(self, player):
-        if player in self.actors:
-            return {
-                'act':{'target': (u'请选择杀人目标', self.targets)},
-                'cancel':{},
-            }
-        else:
-            return None
-
     @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, target):
@@ -247,15 +235,6 @@ class InvestigateStatus(ActStatus):
         else:
             return self
         
-    def form(self, player):
-        if player in self.actors:
-            return {
-                'act':{'target': (u'请选择指认目标', self.targets)},
-                'cancel':{},
-            }
-        else:
-            return None
-        
     @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, target):
@@ -303,14 +282,6 @@ class TalkStatus(ActStatus):
             return self
         else:
             return self.post()
-
-    def form(self, player):
-        if player in self.actors:
-            return {
-                'act':{'target': (u'请选择怀疑对象（点人）', self.targets), 'words': (u"请发言", "")}
-            }
-        else:
-            return None
 
     @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
@@ -397,14 +368,6 @@ class VoteStatus(ActStatus):
                               pk = True
                               ).pre()
 
-    def form(self, player):
-        if player in self.actors:
-            return {
-                'act':{'target': (u'请选择投票对象', self.targets)}
-            }
-        else:
-            return None
-        
     @ActStatus.access(actor = "actors", target = "targets")
     @ActStatus.count
     def act(self, actor, target):
@@ -430,14 +393,6 @@ class LastWordsStatus(ActStatus):
                 p.message.add('temp', u"等待%s说遗言" % self.talker.nickname)
         self.talker.message.add('temp', u"请说遗言")
         return self
-
-    def form(self, player):
-        if player in self.actors:
-            return {
-                'act':{'words': (u"请说遗言", "")}
-            }        
-        else:
-            return None
         
     @ActStatus.access(actor = "actors")
     @ActStatus.count
